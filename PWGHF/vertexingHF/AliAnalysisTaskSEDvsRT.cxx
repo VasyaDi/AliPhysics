@@ -74,6 +74,12 @@ AliAnalysisTaskSEDvsRT::AliAnalysisTaskSEDvsRT():
    fNChargedInToward(0),
    fNChargedInAway(0),
    fNCharged(0),
+   fPhiDistribution(0),
+   fEtaDistribution(0),
+   fPTDistributionInToward(0),
+   fPTDistributionInTransverse(0),
+   fPTDistributionInAway(0),
+   fPTDistributionGlobal(0),
    fCounter(0),
    fReadMC(kFALSE),
    fMCOption(0),
@@ -115,6 +121,12 @@ AliAnalysisTaskSEDvsRT::AliAnalysisTaskSEDvsRT(const char *name, Int_t pdgSpecie
    fNChargedInToward(0),
    fNChargedInAway(0),
    fNCharged(0),
+   fPhiDistribution(0),
+   fEtaDistribution(0),
+   fPTDistributionInToward(0),
+   fPTDistributionInTransverse(0),
+   fPTDistributionInAway(0),
+   fPTDistributionGlobal(0),
    fCounter(0),
    fReadMC(kFALSE),
    fMCOption(0),
@@ -298,7 +310,8 @@ void AliAnalysisTaskSEDvsRT::UserCreateOutputObjects()
    fHistNEvents->GetXaxis()->SetBinLabel(9,"no. of cand wo bitmask");
    fHistNEvents->GetXaxis()->SetBinLabel(10,"D after cuts (No PID)");
    fHistNEvents->GetXaxis()->SetBinLabel(11,"D after cuts + PID)");
-   fHistNEvents->GetXaxis()->SetBinLabel(12,"nEvents with RT calc");
+   //fHistNEvents->GetXaxis()->SetBinLabel(12,"nEvents with RT calc");
+   fHistNEvents->GetXaxis()->SetBinLabel(12,"Test successful");
 
    fHistNEvents->GetXaxis()->SetNdivisions(1,kFALSE);
    fHistNEvents->Sumw2();
@@ -413,6 +426,14 @@ void AliAnalysisTaskSEDvsRT::UserCreateOutputObjects()
    fNChargedInAway = new TH1F("fNChargedInAway","Charged Tracks in Away region;N_{ch};Entries",200,0,200);
    fNCharged = new TH1F("fNCharged","Charged Tracks in all regions;N_{ch};Entries",200,0,200);
 
+   fPhiDistribution = new TH1F("fPhiDistribution","Phi distribution of all charged particles",320,0,6.4);
+   fEtaDistribution = new TH1F("fEtaDistribution","Eta distribution of all charged particles",400,-5,5);
+
+   fPTDistributionInToward = new TH1F("fPTDistributionInToward","pT distribution of all charged particles in Toward region",250,0,50);
+   fPTDistributionInTransverse = new TH1F("fPTDistributionInTransverse","pT distribution of all charged particles in Transverse region",250,0,50);
+   fPTDistributionInAway = new TH1F("fPTDistributionInAway","pT distribution of all charged particles in Away region",250,0,50);
+   fPTDistributionGlobal = new TH1F("fPTDistributionGlobal","pT distribution of all charged particles in all regions",250,0,50);
+
    fListQAhists->Add(fGlobalRT);
    fListQAhists->Add(fHistPtLead);
    fListQAhists->Add(fRTvsZvtxvsMult);
@@ -420,6 +441,12 @@ void AliAnalysisTaskSEDvsRT::UserCreateOutputObjects()
    fListQAhists->Add(fNChargedInToward);
    fListQAhists->Add(fNChargedInAway);
    fListQAhists->Add(fNCharged);
+   fListQAhists->Add(fPhiDistribution);
+   fListQAhists->Add(fEtaDistribution);
+   fListQAhists->Add(fPTDistributionInToward);
+   fListQAhists->Add(fPTDistributionInTransverse);
+   fListQAhists->Add(fPTDistributionInAway);
+   fListQAhists->Add(fPTDistributionGlobal);
 
 
    PostData(1,fOutput);
@@ -754,7 +781,7 @@ TClonesArray *arrayMC=0;
          Double_t fDeltaPhiMinCut = TMath::DegToRad()*60.;
          Double_t fDeltaPhiMaxCut = TMath::DegToRad()*120.;
          Int_t region = 0;
-         if ((candDeltaPhi < -fDeltaPhiMinCut) && (candDeltaPhi > 2*fDeltaPhiMaxCut)) region = -1; //left
+         if ((candDeltaPhi < -fDeltaPhiMinCut) || (candDeltaPhi > 2*fDeltaPhiMaxCut)) region = -1; //left
          if ((candDeltaPhi >  fDeltaPhiMinCut) && (candDeltaPhi < fDeltaPhiMaxCut))   region = 1; //right
 
          if ((candDeltaPhi > -fDeltaPhiMinCut) && (candDeltaPhi < fDeltaPhiMinCut))   region = 2; // toward
@@ -993,7 +1020,10 @@ TObjArray *AliAnalysisTaskSEDvsRT::SortRegions(const AliVParticle* leading, TObj
 
       //transverse regions
 
-      if((deltaPhi<-fUeDeltaPhiMinCut) && (deltaPhi >2*fUeDeltaPhiMaxCut))region = -1; //left
+      fPhiDistribution->Fill(part->Phi());
+      fEtaDistribution->Fill(part->Eta());
+
+      if((deltaPhi<-fUeDeltaPhiMinCut) || (deltaPhi >2*fUeDeltaPhiMaxCut))region = -1; //left
       if((deltaPhi > fUeDeltaPhiMinCut) && (deltaPhi <fUeDeltaPhiMaxCut)) region = 1;   //right
 
       if(deltaPhi > -fUeDeltaPhiMinCut && deltaPhi < fUeDeltaPhiMinCut) region = 2;    //forward
@@ -1008,6 +1038,11 @@ TObjArray *AliAnalysisTaskSEDvsRT::SortRegions(const AliVParticle* leading, TObj
       if(region == -1) transverse2->Add(part);
       if(region == 2) toward->Add(part);
       if(region == -2) away->Add(part);
+
+      if(region == 1 || region == -1) fPTDistributionInTransverse->Fill(part->Pt());
+      if(region == 2) fPTDistributionInToward->Fill(part->Pt());
+      if(region == -2) fPTDistributionInAway->Fill(part->Pt());
+      fPTDistributionGlobal->Fill(part->Pt());
 
       allregions->Add(part);
    }//end loop on tracks
